@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
+body {
+  overflow-x: hidden;
+  @apply text-slate-800 antialiased;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background:
+    radial-gradient(900px 400px at 100% -10%, rgba(16, 185, 129, 0.10), transparent 60%),
+    radial-gradient(700px 400px at -10% 10%, rgba(99, 102, 241, 0.08), transparent 60%),
+    #f6f8fb;
+  background-attachment: fixed;
+}
+@layer components {
+  .card { @apply rounded-2xl border border-white/70 bg-white/90 p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)] backdrop-blur; }
+  .btn { @apply min-h-[44px] sm:min-h-0 inline-flex items-center justify-center gap-1 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 px-4 py-2 text-sm font-medium text-white shadow-sm shadow-emerald-600/20 transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50; }
+  .btn-ghost { @apply inline-flex min-h-[36px] items-center rounded-lg px-2 py-1 text-xs sm:min-h-0 font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800; }
+  .btn-outline { @apply min-h-[44px] sm:min-h-0 inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50; }
+  .input { @apply min-h-[44px] w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2 text-base transition sm:min-h-0 sm:text-sm focus:border-emerald-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-100; }
+  .label { @apply mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-400; }
+  .h1 { @apply text-2xl font-bold tracking-tight text-slate-900 md:text-3xl; }
+  .h2 { @apply text-base font-semibold text-slate-900; }
+  .pill { @apply inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium; }
+}
+table thead th { @apply font-semibold; }

@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String   @default("")
+  password       String
+  isAdmin        Boolean  @default(false)
+  active         Boolean  @default(true)
+  sessionVersion Int      @default(0)
+  createdAt      DateTime @default(now())
+}
+
+// kind: CHECKING | CASH | CARD | SAVINGS | INVESTMENT
+model Account {
+  userId String?
+  id             String        @id @default(cuid())
+  name           String
+  kind           String        @default("CHECKING")
+  initialBalance Int           @default(0)
+  archived       Boolean       @default(false)
+  transactions   Transaction[]
+  transfersIn    Transaction[] @relation("TransferTo")
+  @@index([userId])
+}
+
+// bucket: NEEDS | WANTS | SAVINGS | INCOME
+model Category {
+  userId String?
+  id           String          @id @default(cuid())
+  name         String
+  bucket       String
+  color        String          @default("#64748b")
+  transactions Transaction[]
+  budget       Budget?
+  recurring    RecurringRule[]
+  deadlines    Deadline[]
+  @@index([userId])
+}
+
+// type: INCOME | EXPENSE | TRANSFER ; amount sempre positivo, in centesimi
+model Transaction {
+  userId String?
+  id          String         @id @default(cuid())
+  date        DateTime
+  amount      Int
+  type        String
+  note        String         @default("")
+  accountId   String
+  account     Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  toAccountId String?
+  toAccount   Account?       @relation("TransferTo", fields: [toAccountId], references: [id])
+  categoryId  String?
+  category    Category?      @relation(fields: [categoryId], references: [id])
+  receiptFile String?
+  recurringId String?
+  recurring   RecurringRule? @relation(fields: [recurringId], references: [id], onDelete: SetNull)
+  deadline    Deadline?
+  createdAt   DateTime       @default(now())
+
+  @@index([date])
+  @@index([userId])
+}
+
+// frequency: WEEKLY | MONTHLY | QUARTERLY | YEARLY
+model RecurringRule {
+  userId String?
+  id           String        @id @default(cuid())
+  name         String
+  type         String
+  amount       Int
+  frequency    String        @default("MONTHLY")
+  nextDate     DateTime
+  active       Boolean       @default(true)
+  accountId    String
+  categoryId   String?
+  category     Category?     @relation(fields: [categoryId], references: [id])
+  transactions Transaction[]
+  @@index([userId])
+}
+
+model Budget {
+  id         String   @id @default(cuid())
+  categoryId String   @unique
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  monthly    Int
+}
+
+model SavingsGoal {
+  userId String?
+  id       String    @id @default(cuid())
+  name     String
+  target   Int
+  saved    Int       @default(0)
+  dueDate  DateTime?
+  archived Boolean   @default(false)
+  @@index([userId])
+}
+
+// kind: BOLLETTA | BOLLO | ASSICURAZIONE | MUTUO | FINANZIAMENTO | ALTRO
+// recurrence: NONE | MONTHLY | BIMONTHLY | QUARTERLY | YEARLY
+model Deadline {
+  userId String?
+  id            String       @id @default(cuid())
+  title         String
+  kind          String
+  amount        Int
+  dueDate       DateTime
+  recurrence    String       @default("NONE")
+  remindDaysBefore Int       @default(3)
+  paid          Boolean      @default(false)
+  paidAt        DateTime?
+  lastNotified  DateTime?
+  categoryId    String?
+  category      Category?    @relation(fields: [categoryId], references: [id])
+  transactionId String?      @unique
+  transaction   Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  loanId        String?
+  loan          Loan?        @relation(fields: [loanId], references: [id], onDelete: Cascade)
+
+  @@index([dueDate])
+  @@index([userId])
+}
+
+model Loan {
+  userId String?
+  id          String     @id @default(cuid())
+  name        String
+  kind        String     @default("MUTUO")
+  principal   Int
+  annualRate  Float
+  installment Int
+  totalRates  Int
+  startDate   DateTime
+  deadlines   Deadline[]
+  @@index([userId])
+}
+
+// kind: ETF | STOCK | CRYPTO | BOND | OTHER
+model Holding {
+  userId String?
+  id           String @id @default(cuid())
+  name         String
+  symbol       String @default("")
+  kind         String @default("ETF")
+  quantity     Float
+  avgPrice     Int
+  currentPrice Int
+  @@index([userId])
+}
+
+model NetWorthSnapshot {
+  userId String?
+  id         String   @id @default(cuid())
+  month      String
+  cash       Int
+  investments Int
+  debt       Int
+  createdAt  DateTime @default(now())
+  @@index([userId])
+  @@unique([userId, month])
+}
+
+model Settings {
+  id            Int     @id @default(autoincrement())
+  userId        String? @unique
+  telegramChatId String @default("")
+  notifyEmailTo String  @default("")
+  needsPct      Int     @default(50)
+  wantsPct      Int     @default(30)
+  savingsPct    Int     @default(20)
+  notifyTelegram Boolean @default(true)
+  notifyEmail   Boolean @default(true)
+}

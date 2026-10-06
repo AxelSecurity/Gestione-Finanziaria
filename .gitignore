@@ -1,0 +1,10 @@
+node_modules
+.next
+data
+.env
+*.db
+*.db-journal
+public/tesseract
+tsconfig.tsbuildinfo
+prisma/data
+*.bak

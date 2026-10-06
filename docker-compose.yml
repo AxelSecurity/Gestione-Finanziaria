@@ -1,0 +1,20 @@
+services:
+  app:
+    build: .
+    container_name: gestione-finanziaria
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: file:/data/finance.db
+    volumes:
+      - ./data:/data
+    # Nessuna porta pubblicata: Nginx Proxy Manager raggiunge l'app via rete Docker condivisa.
+    expose:
+      - "3000"
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:-scoobydoo}   # nome della rete del container NPM (docker network ls)
