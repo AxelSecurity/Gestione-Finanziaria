@@ -1,6 +1,8 @@
 "use client";
 import { useRef, useState } from "react";
-import { Camera, ImageIcon, Loader2, X, ScanLine } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Camera, ImageIcon, Loader2, X, ScanLine, Paperclip } from "lucide-react";
 import { scanImage } from "@/lib/scan-image";
 import { recognize } from "@/lib/ocr";
 import { parseReceipt } from "@/lib/receipt";
@@ -9,16 +11,23 @@ type Opt = { id: string; name: string; bucketLabel?: string };
 type Type = "EXPENSE" | "INCOME" | "TRANSFER";
 const TYPES: { v: Type; l: string }[] = [{ v: "EXPENSE", l: "Uscita" }, { v: "INCOME", l: "Entrata" }, { v: "TRANSFER", l: "Trasferimento" }];
 
-export function TransactionForm({ action, accounts, categories, today }: {
-  action: (f: FormData) => Promise<void>; accounts: Opt[]; categories: Opt[]; today: string;
+export interface TxInitial {
+  id: string; type: Type; amount: string; date: string; accountId: string; toAccountId: string; categoryId: string; note: string; hasReceipt: boolean;
+}
+
+export function TransactionForm({ action, accounts, categories, today, initial, backHref }: {
+  action: (f: FormData) => Promise<void>; accounts: Opt[]; categories: Opt[]; today: string; initial?: TxInitial; backHref: string;
 }) {
-  const [type, setType] = useState<Type>("EXPENSE");
-  const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(today);
-  const [categoryId, setCategoryId] = useState("");
-  const [note, setNote] = useState("");
-  const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
-  const [toAccountId, setToAccountId] = useState("");
+  const router = useRouter();
+  const editing = !!initial;
+  const [type, setType] = useState<Type>(initial?.type ?? "EXPENSE");
+  const [amount, setAmount] = useState(initial?.amount ?? "");
+  const [date, setDate] = useState(initial?.date ?? today);
+  const [categoryId, setCategoryId] = useState(initial?.categoryId ?? "");
+  const [note, setNote] = useState(initial?.note ?? "");
+  const [accountId, setAccountId] = useState(initial?.accountId ?? accounts[0]?.id ?? "");
+  const [toAccountId, setToAccountId] = useState(initial?.toAccountId ?? "");
+  const [dropReceipt, setDropReceipt] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [status, setStatus] = useState<{ kind: "idle" | "busy" | "ok" | "warn" | "err"; msg?: string; pct?: number }>({ kind: "idle" });
   const [rawText, setRawText] = useState("");
@@ -68,6 +77,7 @@ export function TransactionForm({ action, accounts, categories, today }: {
     setPending(true);
     try {
       await action(fd);
+      if (editing) { router.replace(backHref); router.refresh(); return; }
       setAmount(""); setNote(""); setCategoryId(""); setToAccountId("");
       clearScan();
     } finally { setPending(false); }
@@ -75,7 +85,15 @@ export function TransactionForm({ action, accounts, categories, today }: {
 
   const busy = status.kind === "busy";
   return (
-    <form action={submit} className="card space-y-4">
+    <form action={submit} className={`card space-y-4 ${editing ? "ring-2 ring-amber-300" : ""}`}>
+      {editing && (
+        <div className="flex items-center justify-between">
+          <h2 className="h2">Modifica movimento</h2>
+          <Link href={backHref} className="btn-ghost">Annulla</Link>
+        </div>
+      )}
+      {editing && <input type="hidden" name="id" value={initial!.id} />}
+      {dropReceipt && <input type="hidden" name="dropReceipt" value="1" />}
       <input ref={fileInput} type="file" name="receipt" accept="image/*" className="hidden" tabIndex={-1} />
       <input type="hidden" name="type" value={type} />
 
@@ -93,6 +111,16 @@ export function TransactionForm({ action, accounts, categories, today }: {
           <ScanPicker label="Scatta scontrino" icon={<Camera size={18} />} capture onPick={onPick} disabled={busy} primary />
           <ScanPicker label="Da galleria" icon={<ImageIcon size={18} />} onPick={onPick} disabled={busy} />
           <span className="hidden text-xs text-slate-400 sm:inline">La lettura avviene sul tuo dispositivo.</span>
+        </div>
+      )}
+
+      {editing && initial!.hasReceipt && !preview && (
+        <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 p-3 text-sm">
+          <span className="flex items-center gap-2 text-slate-600"><Paperclip size={16} />{dropReceipt ? "Lo scontrino verrà rimosso" : "Scontrino archiviato"}</span>
+          <span className="flex gap-2">
+            {!dropReceipt && <a href={`/api/receipts/${initial!.id}`} target="_blank" rel="noreferrer" className="btn-ghost">Vedi</a>}
+            <button type="button" className="btn-ghost" onClick={() => setDropReceipt(!dropReceipt)}>{dropReceipt ? "Annulla" : "Rimuovi"}</button>
+          </span>
         </div>
       )}
 
@@ -126,7 +154,7 @@ export function TransactionForm({ action, accounts, categories, today }: {
         <div className={type === "TRANSFER" ? "sm:col-span-3" : "sm:col-span-3"}><label className="label">Nota / negozio</label>
           <input name="note" value={note} onChange={(e) => setNote(e.target.value)} className="input" /></div>
       </div>
-      <button className="btn w-full py-3 text-base sm:w-auto" disabled={pending || busy}>{pending ? "Salvo…" : "Aggiungi movimento"}</button>
+      <button className="btn w-full py-3 text-base sm:w-auto" disabled={pending || busy}>{pending ? "Salvo…" : editing ? "Salva modifiche" : "Aggiungi movimento"}</button>
     </form>
   );
 }

@@ -1,15 +1,16 @@
 import { PageHeader } from "@/components/ui";
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { formatDate, formatEUR, toInputDate } from "@/lib/money";
 import { deleteRecurring, deleteTransaction, saveRecurring, saveTransaction, toggleRecurring } from "@/server/actions";
-import { Paperclip, Trash2 } from "lucide-react";
+import { Paperclip, Pencil, Trash2 } from "lucide-react";
 import { TransactionForm } from "@/components/transaction-form";
 import { BUCKET_LABEL, Field } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
-type SP = { month?: string; account?: string; category?: string; q?: string };
+type SP = { month?: string; account?: string; category?: string; q?: string; edit?: string };
 
 export default async function Transactions({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
@@ -32,6 +33,10 @@ export default async function Transactions({ searchParams }: { searchParams: Pro
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     }),
   ]);
+  const editTx = sp.edit ? await db.transaction.findFirst({ where: { id: sp.edit, userId } }) : null;
+  const params = new URLSearchParams(Object.entries({ month: sp.month, account: sp.account, category: sp.category, q: sp.q }).filter(([, v]) => v) as [string, string][]);
+  const backHref = `/transactions${params.size ? `?${params}` : ""}`;
+  const editHref = (id: string) => `/transactions?${new URLSearchParams([...params, ["edit", id]])}`;
   const today = toInputDate(new Date());
   const catOptions = categories.map((c) => <option key={c.id} value={c.id}>{c.name} ({BUCKET_LABEL[c.bucket]})</option>);
   const accOptions = accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>);
@@ -41,6 +46,13 @@ export default async function Transactions({ searchParams }: { searchParams: Pro
       <PageHeader title="Movimenti" subtitle="Entrate, uscite e trasferimenti" />
 
       <TransactionForm
+        key={editTx?.id ?? "new"}
+        backHref={backHref}
+        initial={editTx ? {
+          id: editTx.id, type: editTx.type as "INCOME" | "EXPENSE" | "TRANSFER", amount: (editTx.amount / 100).toFixed(2).replace(".", ","),
+          date: toInputDate(editTx.date), accountId: editTx.accountId, toAccountId: editTx.toAccountId ?? "", categoryId: editTx.categoryId ?? "",
+          note: editTx.note, hasReceipt: !!editTx.receiptFile,
+        } : undefined}
         action={saveTransaction}
         today={today}
         accounts={accounts.map((a) => ({ id: a.id, name: a.name }))}
@@ -62,7 +74,7 @@ export default async function Transactions({ searchParams }: { searchParams: Pro
             const sign = t.type === "INCOME" ? "+" : t.type === "EXPENSE" ? "−" : "";
             const color = t.type === "INCOME" ? "text-emerald-600" : t.type === "EXPENSE" ? "text-rose-600" : "text-slate-600";
             return (
-              <li key={t.id} className="flex items-center gap-3 px-4 py-3">
+              <li key={t.id} className={`flex items-center gap-3 px-4 py-3 ${editTx?.id === t.id ? "bg-amber-50" : ""}`}>
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white" style={{ background: t.category?.color ?? "#94a3b8" }}>
                   {t.type === "TRANSFER" ? "⇄" : (t.category?.name ?? "?").charAt(0).toUpperCase()}
                 </span>
@@ -78,6 +90,7 @@ export default async function Transactions({ searchParams }: { searchParams: Pro
                     <Paperclip size={16} />
                   </a>
                 )}
+                <Link href={editHref(t.id)} className="btn-ghost" aria-label="Modifica" title="Modifica"><Pencil size={16} /></Link>
                 <form action={deleteTransaction.bind(null, t.id)}><button className="btn-ghost" aria-label="Elimina"><Trash2 size={16} /></button></form>
               </li>
             );

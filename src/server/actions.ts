@@ -67,9 +67,18 @@ export async function saveTransaction(f: FormData) {
   };
   const id = str(f, "id");
   if (id && !(await db.transaction.findFirst({ where: { id, userId }, select: { id: true } }))) throw new Error("Movimento non trovato");
-  const saved = id ? await db.transaction.update({ where: { id }, data }) : await db.transaction.create({ data: { ...data, userId } });
   const receipt = f.get("receipt");
-  if (receipt instanceof File && receipt.size > 0) {
+  const hasNewReceipt = receipt instanceof File && receipt.size > 0;
+  // in modifica: "Rimuovi scontrino" elimina il file e svuota il riferimento (se non ne arriva uno nuovo)
+  const dropReceipt = !!id && f.get("dropReceipt") === "1" && !hasNewReceipt;
+  if (dropReceipt) {
+    const old = await db.transaction.findFirst({ where: { id, userId }, select: { receiptFile: true } });
+    await removeReceipt(old?.receiptFile);
+  }
+  const saved = id
+    ? await db.transaction.update({ where: { id }, data: dropReceipt ? { ...data, receiptFile: null } : data })
+    : await db.transaction.create({ data: { ...data, userId } });
+  if (hasNewReceipt) {
     const name = await saveReceipt(saved.id, receipt);
     if (name) await db.transaction.update({ where: { id: saved.id }, data: { receiptFile: name } });
   }
