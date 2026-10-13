@@ -11,6 +11,8 @@ import { monthlyPayment } from "@/lib/loans";
 import { createLoanDeadlines, notifyDeadlines, processRecurring, takeSnapshot } from "./services";
 import { notify } from "./notifications";
 import { removeReceipt, saveReceipt } from "./receipts";
+import { filesFrom, removeDocFiles, saveDocuments, validateFiles } from "./documents";
+import type { FormState } from "./user-actions";
 
 /** Utente autenticato e attivo, altrimenti errore. Tutte le query sono filtrate per questo id. */
 async function uid() {
@@ -198,16 +200,43 @@ export async function deleteGoal(id: string) {
 }
 
 // ---------- Scadenzario ----------
-export async function saveDeadline(f: FormData) {
+export async function saveDeadline(_: FormState, f: FormData): Promise<FormState> {
   const userId = await uid();
-  await db.deadline.create({
+  const files = filesFrom(f, "documents");
+  const bad = validateFiles(files);
+  if (bad) return { error: bad };
+  const d = await db.deadline.create({
     data: {
       userId, title: str(f, "title"), kind: str(f, "kind") || "BOLLETTA", amount: parseEUR(str(f, "amount") || "0"),
       dueDate: new Date(str(f, "dueDate")), recurrence: str(f, "recurrence") || "NONE",
       remindDaysBefore: Number(f.get("remindDaysBefore") ?? 3), categoryId: await checkCategory(userId, optId(f, "categoryId")),
     },
   });
+  await saveDocuments(userId, d.id, files);
   done("/deadlines", "/");
+  return { ok: files.length ? `Scadenza aggiunta con ${files.length} document${files.length > 1 ? "i" : "o"}` : "Scadenza aggiunta" };
+}
+
+export async function addDeadlineDocuments(_: FormState, f: FormData): Promise<FormState> {
+  const userId = await uid();
+  const files = filesFrom(f, "documents");
+  if (!files.length) return { error: "Seleziona almeno un file" };
+  const bad = validateFiles(files);
+  if (bad) return { error: bad };
+  const d = await db.deadline.findFirst({ where: { id: str(f, "deadlineId"), userId }, select: { id: true } });
+  if (!d) return { error: "Scadenza non trovata" };
+  await saveDocuments(userId, d.id, files);
+  done("/deadlines");
+  return { ok: `${files.length} document${files.length > 1 ? "i caricati" : "o caricato"}` };
+}
+
+export async function deleteDeadlineDocument(id: string) {
+  const userId = await uid();
+  const doc = await db.deadlineDocument.findFirst({ where: { id, userId } });
+  if (!doc) return;
+  await db.deadlineDocument.delete({ where: { id } });
+  await removeDocFiles([doc]);
+  done("/deadlines");
 }
 
 const REC_MONTHS: Record<string, number> = { MONTHLY: 1, BIMONTHLY: 2, QUARTERLY: 3, YEARLY: 12 };
@@ -244,7 +273,9 @@ export async function unpayDeadline(id: string) {
 }
 export async function deleteDeadline(id: string) {
   const userId = await uid();
+  const docs = await db.deadlineDocument.findMany({ where: { deadlineId: id, userId } });
   await db.deadline.deleteMany({ where: { id, userId } });
+  await removeDocFiles(docs);
   done("/deadlines", "/");
 }
 export async function saveLoan(f: FormData) {
@@ -261,7 +292,9 @@ export async function saveLoan(f: FormData) {
 }
 export async function deleteLoan(id: string) {
   const userId = await uid();
+  const docs = await db.deadlineDocument.findMany({ where: { userId, deadline: { loanId: id } } });
   await db.loan.deleteMany({ where: { id, userId } });
+  await removeDocFiles(docs);
   done("/deadlines", "/investments");
 }
 

@@ -3,6 +3,9 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { formatDate, formatEUR, toInputDate } from "@/lib/money";
 import { deleteDeadline, deleteLoan, payDeadline, saveDeadline, saveLoan, unpayDeadline } from "@/server/actions";
+import { StateForm } from "@/components/form-state";
+import { DeadlineDocs } from "@/components/deadline-docs";
+import { ACCEPT } from "@/server/documents";
 import { Field, KIND_LABEL } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -17,8 +20,8 @@ export default async function Deadlines({ searchParams }: { searchParams: Promis
   ]);
   const horizon = new Date(); horizon.setMonth(horizon.getMonth() + (all ? 24 : 3));
   const [open, paid] = await Promise.all([
-    db.deadline.findMany({ where: { userId, paid: false, dueDate: { lte: horizon } }, orderBy: { dueDate: "asc" } }),
-    db.deadline.findMany({ where: { userId, paid: true }, orderBy: { paidAt: "desc" }, take: 8 }),
+    db.deadline.findMany({ where: { userId, paid: false, dueDate: { lte: horizon } }, include: { documents: true }, orderBy: { dueDate: "asc" } }),
+    db.deadline.findMany({ where: { userId, paid: true }, include: { documents: true }, orderBy: { paidAt: "desc" }, take: 8 }),
   ]);
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const accOptions = accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>);
@@ -35,7 +38,8 @@ export default async function Deadlines({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHeader title="Scadenzario" subtitle="Bollette, bolli, assicurazioni, rate" />
-      <form action={saveDeadline} className="card grid gap-3 sm:grid-cols-6">
+      <section className="card">
+        <StateForm action={saveDeadline} submit="Aggiungi scadenza" className="grid gap-3 sm:grid-cols-6" resetOnOk buttonClass="btn sm:col-span-2">
         <div className="sm:col-span-2"><Field label="Descrizione"><input name="title" required className="input" placeholder="Bolletta luce, bollo auto…" /></Field></div>
         <Field label="Tipo"><select name="kind" className="input">{kinds}</select></Field>
         <Field label="Importo (€)"><input name="amount" required inputMode="decimal" className="input" /></Field>
@@ -43,8 +47,9 @@ export default async function Deadlines({ searchParams }: { searchParams: Promis
         <Field label="Ripeti"><select name="recurrence" className="input"><option value="NONE">Mai</option><option value="MONTHLY">Ogni mese</option><option value="BIMONTHLY">Ogni 2 mesi</option><option value="QUARTERLY">Ogni 3 mesi</option><option value="YEARLY">Ogni anno</option></select></Field>
         <Field label="Promemoria (gg prima)"><input name="remindDaysBefore" type="number" min={0} defaultValue={3} className="input" /></Field>
         <div className="sm:col-span-3"><Field label="Categoria"><select name="categoryId" className="input"><option value="">—</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field></div>
-        <div className="flex items-end sm:col-span-2"><button className="btn w-full">Aggiungi scadenza</button></div>
-      </form>
+        <div className="sm:col-span-6"><Field label="Documenti (opzionale: F24, bollettino, polizza…)"><input name="documents" type="file" multiple accept={`${ACCEPT},image/*`} className="input file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-1 file:text-sm file:font-medium file:text-emerald-700" /></Field></div>
+      </StateForm>
+      </section>
 
       <div className="flex items-center justify-between text-sm text-slate-500">
         <span>Da pagare nel periodo: <b className="text-slate-800">{formatEUR(totalOpen)}</b></span>
@@ -70,6 +75,7 @@ export default async function Deadlines({ searchParams }: { searchParams: Promis
                   </form>
                   <form action={deleteDeadline.bind(null, d.id)}><button className="btn-ghost">✕</button></form>
                 </div>
+                <DeadlineDocs deadlineId={d.id} docs={d.documents} />
               </li>
             ))}
           </ul>
@@ -82,9 +88,10 @@ export default async function Deadlines({ searchParams }: { searchParams: Promis
           <h2 className="mb-2 text-sm font-medium">Pagate di recente</h2>
           <ul className="divide-y divide-slate-100 text-sm">
             {paid.map((d) => (
-              <li key={d.id} className="flex justify-between py-2 text-slate-500">
+              <li key={d.id} className="flex flex-wrap justify-between py-2 text-slate-500">
                 <span>{d.title} · {d.paidAt && formatDate(d.paidAt)}</span>
                 <span className="flex items-center gap-2">{formatEUR(d.amount)}<form action={unpayDeadline.bind(null, d.id)}><button className="btn-ghost">Annulla</button></form></span>
+                <DeadlineDocs deadlineId={d.id} docs={d.documents} />
               </li>
             ))}
           </ul>

@@ -24,7 +24,7 @@ docker compose up -d --build
   1. Trova la rete di NPM: `docker network ls` (sulla tua VPS è `scoobydoo`, già il valore predefinito). Se cambia, imposta `PROXY_NETWORK=nome_rete` nel `.env`.
   2. In NPM → Proxy Hosts → Add: Domain `finanza.tuodominio.it`, Scheme `http`, Forward Hostname `gestione-finanziaria`, Port `3000`.
   3. Tab SSL: richiedi il certificato Let's Encrypt e attiva *Force SSL* (serve HTTPS per fotocamera e installazione come app).
-  4. Tab Advanced, incolla: `client_max_body_size 10m;` (altrimenti gli scontrini oltre 1 MB vengono rifiutati).
+  4. Tab Advanced, incolla: `client_max_body_size 25m;` (altrimenti scontrini e documenti oltre 1 MB vengono rifiutati).
 - `ADMIN_EMAIL`/`ADMIN_PASSWORD` creano l'amministratore solo al primo avvio; poi la password si cambia dal **Profilo**.
   Password persa: imposta `ADMIN_RESET_PASSWORD=true` nel `.env`, riavvia, poi rimuovilo.
 - **Utenti**: l'admin crea/disattiva/elimina utenti dal menu *Utenti*. Ogni utente ha dati completamente separati (conti, movimenti, scadenze, scontrini, budget, 50/30/20).

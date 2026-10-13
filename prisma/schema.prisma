@@ -124,6 +124,7 @@ model Deadline {
   transaction   Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
   loanId        String?
   loan          Loan?        @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  documents     DeadlineDocument[]
 
   @@index([dueDate])
   @@index([userId])
@@ -178,4 +179,19 @@ model Settings {
   savingsPct    Int     @default(20)
   notifyTelegram Boolean @default(true)
   notifyEmail   Boolean @default(true)
+}
+
+// Allegati di una scadenza (F24, bollettini, polizze…). Il file sta su disco come <id>.<ext>
+model DeadlineDocument {
+  id         String   @id @default(cuid())
+  userId     String
+  deadlineId String
+  deadline   Deadline @relation(fields: [deadlineId], references: [id], onDelete: Cascade)
+  name       String
+  ext        String
+  size       Int
+  createdAt  DateTime @default(now())
+
+  @@index([deadlineId])
+  @@index([userId])
 }

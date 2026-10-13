@@ -22,7 +22,7 @@ export async function GET(req: Request) {
     accounts: await db.account.findMany({ where }), categories: await db.category.findMany({ where }),
     transactions: await db.transaction.findMany({ where }), recurring: await db.recurringRule.findMany({ where }),
     budgets: await db.budget.findMany({ where: { category: where } }), goals: await db.savingsGoal.findMany({ where }),
-    deadlines: await db.deadline.findMany({ where }), loans: await db.loan.findMany({ where }),
+    deadlines: await db.deadline.findMany({ where }), deadlineDocuments: await db.deadlineDocument.findMany({ where }), loans: await db.loan.findMany({ where }),
     holdings: await db.holding.findMany({ where }), snapshots: await db.netWorthSnapshot.findMany({ where }),
   };
   return new Response(JSON.stringify(data, null, 2), {

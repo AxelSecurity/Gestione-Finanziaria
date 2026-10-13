@@ -16,7 +16,7 @@ RUN npm run build
 
 FROM base AS runner
 WORKDIR /app
-ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 DATABASE_URL="file:/data/finance.db" RECEIPTS_DIR=/data/receipts TZ=Europe/Rome
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 DATABASE_URL="file:/data/finance.db" RECEIPTS_DIR=/data/receipts DOCUMENTS_DIR=/data/documents TZ=Europe/Rome
 # CLI Prisma per creare/aggiornare lo schema all'avvio
 RUN npm i -g prisma@6 && mkdir -p /data && chown node:node /data
 COPY --from=build --chown=node:node /app/.next/standalone ./

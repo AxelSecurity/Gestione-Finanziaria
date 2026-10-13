@@ -7,6 +7,7 @@ import { currentUser } from "@/lib/session";
 import { db } from "@/lib/db";
 import { ensureUserDefaults } from "./defaults";
 import { removeReceipt } from "./receipts";
+import { removeDocFiles } from "./documents";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -95,14 +96,16 @@ export async function deleteUser(id: string) {
   const a = await admin();
   if (id === a.id) throw new Error("Non puoi eliminare te stesso");
   const receipts = await db.transaction.findMany({ where: { userId: id, receiptFile: { not: null } }, select: { receiptFile: true } });
+  const docs = await db.deadlineDocument.findMany({ where: { userId: id } });
   const where = { userId: id };
   await db.$transaction([
-    db.deadline.deleteMany({ where }), db.loan.deleteMany({ where }), db.transaction.deleteMany({ where }),
+    db.deadlineDocument.deleteMany({ where }), db.deadline.deleteMany({ where }), db.loan.deleteMany({ where }), db.transaction.deleteMany({ where }),
     db.recurringRule.deleteMany({ where }), db.budget.deleteMany({ where: { category: where } }),
     db.savingsGoal.deleteMany({ where }), db.holding.deleteMany({ where }), db.netWorthSnapshot.deleteMany({ where }),
     db.category.deleteMany({ where }), db.account.deleteMany({ where }), db.settings.deleteMany({ where }),
     db.user.delete({ where: { id } }),
   ]);
   for (const r of receipts) await removeReceipt(r.receiptFile);
+  await removeDocFiles(docs);
   revalidatePath("/users");
 }
