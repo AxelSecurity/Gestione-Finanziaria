@@ -5,6 +5,7 @@ import { formatDate, formatEUR, toInputDate } from "@/lib/money";
 import { deleteDeadline, deleteLoan, payDeadline, saveDeadline, saveLoan, unpayDeadline } from "@/server/actions";
 import { StateForm } from "@/components/form-state";
 import { DeadlineDocs } from "@/components/deadline-docs";
+import { DocScanner } from "@/components/doc-scanner";
 import { ACCEPT } from "@/server/documents";
 import { Field, KIND_LABEL } from "@/components/ui";
 
@@ -47,7 +48,7 @@ export default async function Deadlines({ searchParams }: { searchParams: Promis
         <Field label="Ripeti"><select name="recurrence" className="input"><option value="NONE">Mai</option><option value="MONTHLY">Ogni mese</option><option value="BIMONTHLY">Ogni 2 mesi</option><option value="QUARTERLY">Ogni 3 mesi</option><option value="YEARLY">Ogni anno</option></select></Field>
         <Field label="Promemoria (gg prima)"><input name="remindDaysBefore" type="number" min={0} defaultValue={3} className="input" /></Field>
         <div className="sm:col-span-3"><Field label="Categoria"><select name="categoryId" className="input"><option value="">—</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field></div>
-        <div className="sm:col-span-6"><Field label="Documenti (opzionale: F24, bollettino, polizza…)"><input name="documents" type="file" multiple accept={`${ACCEPT},image/*`} className="input file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-1 file:text-sm file:font-medium file:text-emerald-700" /></Field></div>
+        <div className="flex flex-wrap items-end gap-2 sm:col-span-6"><div className="min-w-0 flex-1 basis-60"><Field label="Documenti (opzionale: F24, bollettino, polizza…)"><input name="documents" type="file" multiple accept={`${ACCEPT},image/*`} className="input file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-1 file:text-sm file:font-medium file:text-emerald-700" /></Field></div><DocScanner /></div>
       </StateForm>
       </section>
 

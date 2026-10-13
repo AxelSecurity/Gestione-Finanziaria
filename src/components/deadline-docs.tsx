@@ -2,6 +2,7 @@ import { Paperclip, FileText, Image as ImageIcon, FileSpreadsheet, Trash2 } from
 import { addDeadlineDocuments, deleteDeadlineDocument } from "@/server/actions";
 import { ACCEPT } from "@/server/documents";
 import { StateForm } from "@/components/form-state";
+import { DocScanner } from "@/components/doc-scanner";
 
 type Doc = { id: string; name: string; ext: string; size: number };
 
@@ -33,6 +34,7 @@ export function DeadlineDocs({ deadlineId, docs }: { deadlineId: string; docs: D
             <label className="label">Aggiungi documenti (F24, bollettini, polizze…)</label>
             <input name="documents" type="file" multiple accept={`${ACCEPT},image/*`} className="input file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-1 file:text-sm file:font-medium file:text-emerald-700" />
           </div>
+          <DocScanner autoSubmit />
         </StateForm>
       </div>
     </details>
