@@ -5,8 +5,8 @@ import { requireUser } from "@/lib/session";
 import { formatDate, formatEUR, monthRange } from "@/lib/money";
 import { addMonths } from "@/lib/recurrence";
 import { compute503020, type Bucket } from "@/lib/rule503020";
-import { incomeBase, monthSummary } from "@/lib/queries";
-import { contributeGoal, deleteGoal, saveBudget, saveGoal, saveIncomeBase } from "@/server/actions";
+import { monthSummary } from "@/lib/queries";
+import { contributeGoal, deleteGoal, saveBudget, saveGoal } from "@/server/actions";
 import { BUCKET_COLOR, BUCKET_LABEL, Field, PageHeader, Progress } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -46,8 +46,7 @@ export default async function Budget({ searchParams }: { searchParams: Promise<{
     db.savingsGoal.findMany({ where: { userId, archived: false }, orderBy: { dueDate: "asc" } }),
     monthSummary(userId, start, end),
   ]);
-  const base = incomeBase(settings.incomeBase, sum.income);
-  const fixedBase = settings.incomeBase > 0;
+  const base = sum.income; // stipendio/entrate registrati nel mese
   const report = compute503020(base, sum.spent, { needs: settings.needsPct, wants: settings.wantsPct, savings: settings.savingsPct });
   const bmap = new Map(budgets.map((b) => [b.categoryId, b.monthly]));
   const totalSpent = BUCKETS.reduce((s, b) => s + sum.spent[b], 0);
@@ -67,10 +66,15 @@ export default async function Budget({ searchParams }: { searchParams: Promise<{
 
       {/* Stipendio e suddivisione */}
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-900 p-6 text-white shadow-xl md:p-8">
-        <div className="text-sm text-white/60">{fixedBase ? "Stipendio di riferimento" : "Entrate del mese"}</div>
+        <div className="text-sm text-white/60">Stipendio e entrate del mese</div>
         <div className="mt-1 text-4xl font-bold tracking-tight md:text-5xl">{formatEUR(base)}</div>
         {base > 0 ? (
           <>
+            {sum.incomeByCategory.size > 1 && (
+              <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+                {[...sum.incomeByCategory].map(([name, v]) => <span key={name} className="rounded-full bg-white/10 px-2.5 py-0.5 text-white/80">{name} {formatEUR(v)}</span>)}
+              </div>
+            )}
             <div className="mt-5 flex h-4 overflow-hidden rounded-full ring-1 ring-white/20">
               {report.map((r) => <div key={r.bucket} style={{ width: `${r.targetPct}%`, background: BUCKET_COLOR[r.bucket] }} title={`${BUCKET_LABEL[r.bucket]} ${r.targetPct}%`} />)}
             </div>
@@ -84,7 +88,7 @@ export default async function Budget({ searchParams }: { searchParams: Promise<{
             </div>
           </>
         ) : (
-          <p className="mt-3 text-sm text-white/70">Nessuna entrata registrata in questo mese. Registra lo stipendio in <Link href="/transactions" className="underline">Movimenti</Link>, oppure imposta qui sotto uno stipendio di riferimento fisso.</p>
+          <p className="mt-3 text-sm text-white/70">Nessuna entrata registrata in questo mese. Registra lo stipendio come <b>Entrata</b> in <Link href="/transactions" className="underline">Movimenti</Link>: la suddivisione 50/30/20 si calcola da sola.</p>
         )}
       </section>
 
@@ -151,16 +155,6 @@ export default async function Budget({ searchParams }: { searchParams: Promise<{
           </span>
         </section>
       )}
-
-      {/* Stipendio di riferimento */}
-      <details className="card">
-        <summary className="h2 cursor-pointer">Stipendio di riferimento</summary>
-        <p className="mt-2 text-xs text-slate-500">Se lo imposti, il 50/30/20 si calcola su questo importo anche prima che arrivi lo stipendio. Lascia vuoto per usare le entrate registrate nel mese.</p>
-        <form action={saveIncomeBase} className="mt-3 flex flex-wrap items-end gap-2">
-          <div className="min-w-[10rem] flex-1 sm:flex-none"><Field label="Importo mensile (€)"><input name="incomeBase" inputMode="decimal" defaultValue={fixedBase ? (settings.incomeBase / 100).toFixed(2).replace(".", ",") : ""} placeholder="es. 2000,00" className="input" /></Field></div>
-          <button className="btn">Salva</button>
-        </form>
-      </details>
 
       {/* Obiettivi di risparmio */}
       <section className="card space-y-4">

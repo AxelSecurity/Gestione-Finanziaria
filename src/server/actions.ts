@@ -143,13 +143,6 @@ export async function saveTargets(f: FormData) {
   await db.settings.update({ where: { userId }, data: { needsPct: n, wantsPct: w, savingsPct: s } });
   done("/", "/budget");
 }
-export async function saveIncomeBase(f: FormData) {
-  const userId = await uid();
-  const raw = str(f, "incomeBase");
-  const value = raw ? parseEUR(raw) : 0;
-  await db.settings.update({ where: { userId }, data: { incomeBase: Math.max(0, value) } });
-  done("/", "/budget");
-}
 export async function saveNotifyPrefs(f: FormData) {
   const userId = await uid();
   await db.settings.update({
