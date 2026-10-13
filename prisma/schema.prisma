@@ -173,6 +173,7 @@ model Settings {
   userId        String? @unique
   telegramChatId String @default("")
   notifyEmailTo String  @default("")
+  incomeBase    Int     @default(0)
   needsPct      Int     @default(50)
   wantsPct      Int     @default(30)
   savingsPct    Int     @default(20)

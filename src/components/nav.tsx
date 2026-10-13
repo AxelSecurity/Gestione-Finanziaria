@@ -6,7 +6,7 @@ import { Users, LayoutDashboard, ArrowLeftRight, PiggyBank, CalendarClock, Trend
 const NAV = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/transactions", label: "Movimenti", icon: ArrowLeftRight },
-  { href: "/budget", label: "Budget", icon: PiggyBank },
+  { href: "/budget", label: "50/30/20", icon: PiggyBank },
   { href: "/deadlines", label: "Scadenze", icon: CalendarClock },
   { href: "/investments", label: "Patrimonio", icon: TrendingUp },
   { href: "/reports", label: "Report", icon: BarChart3 },

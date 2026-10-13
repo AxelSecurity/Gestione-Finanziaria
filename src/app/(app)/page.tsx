@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { formatDate, formatEUR, monthRange } from "@/lib/money";
 import { compute503020 } from "@/lib/rule503020";
-import { monthSummary } from "@/lib/queries";
+import { incomeBase, monthSummary } from "@/lib/queries";
 import { balances } from "@/server/services";
 import { ArrowDownCircle, ArrowUpCircle, PiggyBank } from "lucide-react";
 import { BUCKET_COLOR, BUCKET_LABEL, KIND_EMOJI, PageHeader, Progress, Stat } from "@/components/ui";
@@ -21,7 +21,8 @@ export default async function Dashboard() {
     db.deadline.findMany({ where: { userId, paid: false }, orderBy: { dueDate: "asc" }, take: 5 }),
     db.budget.findMany({ where: { category: { userId } }, include: { category: true } }),
   ]);
-  const report = compute503020(income, spent, { needs: settings.needsPct, wants: settings.wantsPct, savings: settings.savingsPct });
+  const base = incomeBase(settings.incomeBase, income);
+  const report = compute503020(base, spent, { needs: settings.needsPct, wants: settings.wantsPct, savings: settings.savingsPct });
   const risk = budgets
     .map((b) => ({ ...b, used: byCategory.get(b.categoryId) ?? 0 }))
     .filter((b) => b.used / b.monthly >= 0.8)
@@ -53,7 +54,7 @@ export default async function Dashboard() {
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="card">
           <h2 className="h2 mb-3">Regola {settings.needsPct}/{settings.wantsPct}/{settings.savingsPct}</h2>
-          {income <= 0 ? (
+          {base <= 0 ? (
             <p className="text-sm text-slate-500">Registra le entrate del mese per vedere la ripartizione.</p>
           ) : (
             <div className="space-y-4">
